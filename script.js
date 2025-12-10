@@ -228,11 +228,11 @@ class ImpossibleBtn {
         this.vel = new Vec2();
         this.acc = new Vec2();
         
-        this.radius = 400;
-        this.force = 18;
-        this.friction = 0.88;
-        this.bounce = 0.9;
-        this.maxVel = 65;
+        this.radius = 450;
+        this.force = 22;
+        this.friction = 0.86;
+        this.bounce = 0.95;
+        this.maxVel = 75;
         
         this.w = 0;
         this.h = 0;
@@ -342,39 +342,118 @@ class ImpossibleBtn {
         }
         
         // BONUS PANIC MODE: if mouse is VERY close, add random juke
-        if (mag1 < 120) {
+        if (mag1 < 150) {
             const panicAngle = Math.random() * Math.PI * 2;
             const juke = new Vec2(Math.cos(panicAngle), Math.sin(panicAngle));
-            this.acc = this.acc.add(juke.mul(6));
+            this.acc = this.acc.add(juke.mul(8));
+        }
+        
+        // CORNER AWARENESS: detect if approaching corner and flee to center
+        const center = this.getCenter();
+        const toEdgeX = Math.min(center.x, window.innerWidth - center.x);
+        const toEdgeY = Math.min(center.y, window.innerHeight - center.y);
+        const nearEdge = toEdgeX < 200 || toEdgeY < 200;
+        
+        if (nearEdge && mag1 < 300) {
+            const screenCenter = new Vec2(window.innerWidth / 2, window.innerHeight / 2);
+            const toCenter = screenCenter.sub(center).norm();
+            this.acc = this.acc.add(toCenter.mul(5));
         }
     }
     
     boundaries() {
         let hit = false;
         let intensity = 0;
+        const margin = 60;
+        const center = this.getCenter();
+        const mouseDist = center.sub(this.mouse).len();
         
+        // CORNER TRAP DETECTION
+        const nearLeft = this.pos.x < margin;
+        const nearRight = this.pos.x + this.w > window.innerWidth - margin;
+        const nearTop = this.pos.y < margin;
+        const nearBottom = this.pos.y + this.h > window.innerHeight - margin;
+        
+        const inCorner = (nearLeft || nearRight) && (nearTop || nearBottom);
+        const trapped = inCorner && mouseDist < 350;
+        
+        // EMERGENCY ESCAPE: teleport if trapped in corner with mouse nearby
+        if (trapped) {
+            const safeZones = [];
+            const padding = 150;
+            
+            // Calculate safe zones far from mouse
+            const zones = [
+                { x: padding, y: padding }, // top-left
+                { x: window.innerWidth - this.w - padding, y: padding }, // top-right
+                { x: padding, y: window.innerHeight - this.h - padding }, // bottom-left
+                { x: window.innerWidth - this.w - padding, y: window.innerHeight - this.h - padding }, // bottom-right
+                { x: window.innerWidth / 2 - this.w / 2, y: padding }, // top-center
+                { x: window.innerWidth / 2 - this.w / 2, y: window.innerHeight - this.h - padding }, // bottom-center
+                { x: padding, y: window.innerHeight / 2 - this.h / 2 }, // left-center
+                { x: window.innerWidth - this.w - padding, y: window.innerHeight / 2 - this.h / 2 } // right-center
+            ];
+            
+            zones.forEach(zone => {
+                const zoneDist = Math.sqrt(
+                    Math.pow(zone.x + this.w/2 - this.mouse.x, 2) + 
+                    Math.pow(zone.y + this.h/2 - this.mouse.y, 2)
+                );
+                if (zoneDist > 400) {
+                    safeZones.push({ ...zone, dist: zoneDist });
+                }
+            });
+            
+            if (safeZones.length > 0) {
+                safeZones.sort((a, b) => b.dist - a.dist);
+                const escape = safeZones[0];
+                this.pos.x = escape.x;
+                this.pos.y = escape.y;
+                this.vel = new Vec2(
+                    (Math.random() - 0.5) * 50,
+                    (Math.random() - 0.5) * 50
+                );
+                this.audio.hit(15);
+                this.taunt.show('fast');
+                return;
+            }
+        }
+        
+        // SMART BOUNDARY: bounce with escape velocity away from danger
         if (this.pos.x < 0) {
             this.pos.x = 0;
             intensity = Math.abs(this.vel.x);
-            this.vel.x *= -this.bounce;
+            this.vel.x = Math.abs(this.vel.x) * this.bounce + 20;
+            if (this.mouse.x < window.innerWidth / 2) {
+                this.vel.x += 25;
+            }
             hit = true;
         }
         if (this.pos.x + this.w > window.innerWidth) {
             this.pos.x = window.innerWidth - this.w;
             intensity = Math.abs(this.vel.x);
-            this.vel.x *= -this.bounce;
+            this.vel.x = -Math.abs(this.vel.x) * this.bounce - 20;
+            if (this.mouse.x > window.innerWidth / 2) {
+                this.vel.x -= 25;
+            }
             hit = true;
         }
         if (this.pos.y < 0) {
             this.pos.y = 0;
             intensity = Math.max(intensity, Math.abs(this.vel.y));
-            this.vel.y *= -this.bounce;
+            this.vel.y = Math.abs(this.vel.y) * this.bounce + 20;
+            if (this.mouse.y < window.innerHeight / 2) {
+                this.vel.y += 25;
+            }
             hit = true;
         }
         if (this.pos.y + this.h > window.innerHeight) {
             this.pos.y = window.innerHeight - this.h;
             intensity = Math.max(intensity, Math.abs(this.vel.y));
-            this.vel.y *= -this.bounce;
+            this.vel.y = -Math.abs(this.vel.y) * this.bounce - 20;
+            if (this.mouse.y > window.innerHeight / 2) {
+                this.vel.y -= 25;
+            }
             hit = true;
         }
         
@@ -400,6 +479,16 @@ class ImpossibleBtn {
     
     loop() {
         this.repel();
+        
+        // NEVER STOP MOVING: add constant drift to avoid stalling
+        const center = this.getCenter();
+        const mouseDist = center.sub(this.mouse).len();
+        if (this.vel.len() < 8 && mouseDist < 500) {
+            const driftAngle = Math.random() * Math.PI * 2;
+            const drift = new Vec2(Math.cos(driftAngle), Math.sin(driftAngle));
+            this.acc = this.acc.add(drift.mul(3));
+        }
+        
         this.vel = this.vel.add(this.acc);
         this.vel = this.vel.mul(this.friction);
         this.vel = this.vel.limit(this.maxVel);
@@ -416,10 +505,6 @@ class ImpossibleBtn {
         this.pos = this.pos.add(this.vel);
         this.boundaries();
         this.acc = new Vec2(0, 0);
-        
-        if (this.vel.len() < 0.1 && !this.active) {
-            this.vel = new Vec2(0, 0);
-        }
         
         this.update();
         requestAnimationFrame(() => this.loop());
