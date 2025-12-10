@@ -228,11 +228,11 @@ class ImpossibleBtn {
         this.vel = new Vec2();
         this.acc = new Vec2();
         
-        this.radius = 280;
-        this.force = 5.5;
-        this.friction = 0.94;
-        this.bounce = 0.8;
-        this.maxVel = 30;
+        this.radius = 400;
+        this.force = 18;
+        this.friction = 0.88;
+        this.bounce = 0.9;
+        this.maxVel = 65;
         
         this.w = 0;
         this.h = 0;
@@ -242,7 +242,10 @@ class ImpossibleBtn {
         this.active = false;
         
         this.lastWhoosh = 0;
-        this.whooshCD = 70;
+        this.whooshCD = 50;
+        
+        this.anticipation = 0.25;
+        this.predictSteps = 8;
         
         this.init();
     }
@@ -275,9 +278,27 @@ class ImpossibleBtn {
         });
         
         this.btn.addEventListener('mousedown', (e) => {
-            if (this.vel.len() > 1) {
-                e.preventDefault();
-                e.stopPropagation();
+            e.preventDefault();
+            e.stopPropagation();
+            // TELEPORT TRICK: if they somehow get close, jump away
+            const center = this.getCenter();
+            const dist = center.sub(this.mouse).len();
+            if (dist < 80) {
+                const angle = Math.random() * Math.PI * 2;
+                const jumpDist = 300;
+                this.pos.x = this.mouse.x + Math.cos(angle) * jumpDist;
+                this.pos.y = this.mouse.y + Math.sin(angle) * jumpDist;
+                
+                // Keep in bounds
+                this.pos.x = Math.max(0, Math.min(this.pos.x, window.innerWidth - this.w));
+                this.pos.y = Math.max(0, Math.min(this.pos.y, window.innerHeight - this.h));
+                
+                this.vel = new Vec2(
+                    (Math.random() - 0.5) * 40,
+                    (Math.random() - 0.5) * 40
+                );
+                this.audio.buzz();
+                this.taunt.show('fast');
             }
         });
         
@@ -292,14 +313,39 @@ class ImpossibleBtn {
     repel() {
         if (!this.active) return;
         const center = this.getCenter();
-        const dist = center.sub(this.mouse);
-        const mag = dist.len();
         
-        if (mag < this.radius && mag > 0) {
-            const str = this.force * (1 - mag / this.radius) * (this.radius / mag);
-            const dir = dist.norm();
+        // PREDICTION: anticipate where mouse is going
+        const mouseDelta = this.mouse.sub(this.prevMouse);
+        const predicted = this.mouse.add(mouseDelta.mul(this.predictSteps));
+        
+        // Repel from BOTH current AND predicted position
+        const dist1 = center.sub(this.mouse);
+        const mag1 = dist1.len();
+        
+        const dist2 = center.sub(predicted);
+        const mag2 = dist2.len();
+        
+        // Primary repulsion from current mouse
+        if (mag1 < this.radius && mag1 > 0) {
+            const str = this.force * (1 - mag1 / this.radius) * (this.radius / mag1);
+            const dir = dist1.norm();
             const f = dir.mul(str);
             this.acc = this.acc.add(f);
+        }
+        
+        // Anticipatory repulsion from predicted position
+        if (mag2 < this.radius * 0.7 && mag2 > 0) {
+            const str = this.force * this.anticipation * (1 - mag2 / (this.radius * 0.7));
+            const dir = dist2.norm();
+            const f = dir.mul(str);
+            this.acc = this.acc.add(f);
+        }
+        
+        // BONUS PANIC MODE: if mouse is VERY close, add random juke
+        if (mag1 < 120) {
+            const panicAngle = Math.random() * Math.PI * 2;
+            const juke = new Vec2(Math.cos(panicAngle), Math.sin(panicAngle));
+            this.acc = this.acc.add(juke.mul(6));
         }
     }
     
