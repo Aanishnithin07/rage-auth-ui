@@ -1,252 +1,162 @@
-// ============================================
-// THE IMPOSSIBLE LOGIN - Physics Engine
-// ============================================
-
-// ============================================
-// Audio Engine - Procedural Sound Generation
-// ============================================
-
-class AudioEngine {
-    constructor() {
-        this.audioContext = null;
-        this.masterGain = null;
-        this.initialized = false;
+// ===== VECTOR MATH =====
+class Vec2 {
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
     }
-
-    init() {
-        if (this.initialized) return;
-        
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            this.masterGain = this.audioContext.createGain();
-            this.masterGain.gain.value = 0.3; // Master volume
-            this.masterGain.connect(this.audioContext.destination);
-            this.initialized = true;
-            console.log('🔊 Audio Engine Initialized');
-        } catch (e) {
-            console.warn('Audio API not supported:', e);
-        }
+    add(v) { return new Vec2(this.x + v.x, this.y + v.y); }
+    sub(v) { return new Vec2(this.x - v.x, this.y - v.y); }
+    mul(s) { return new Vec2(this.x * s, this.y * s); }
+    div(s) { return new Vec2(this.x / s, this.y / s); }
+    len() { return Math.sqrt(this.x * this.x + this.y * this.y); }
+    norm() {
+        const l = this.len();
+        return l > 0 ? this.div(l) : new Vec2(0, 0);
     }
-
-    playWhoosh(velocity) {
-        if (!this.initialized) this.init();
-        if (!this.initialized) return;
-
-        const now = this.audioContext.currentTime;
-        
-        // Oscillator for the whoosh sound
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        const filter = this.audioContext.createBiquadFilter();
-        
-        // Map velocity to frequency (faster = higher pitch)
-        const baseFrequency = 150;
-        const frequency = baseFrequency + (velocity * 30);
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, now);
-        oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.5, now + 0.1);
-        
-        // Filter for more organic sound
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(2000, now);
-        filter.Q.setValueAtTime(1, now);
-        
-        // Quick fade in/out envelope
-        gainNode.gain.setValueAtTime(0, now);
-        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
-        
-        // Connect the nodes
-        oscillator.connect(filter);
-        filter.connect(gainNode);
-        gainNode.connect(this.masterGain);
-        
-        // Play
-        oscillator.start(now);
-        oscillator.stop(now + 0.15);
-    }
-
-    playError() {
-        if (!this.initialized) this.init();
-        if (!this.initialized) return;
-
-        const now = this.audioContext.currentTime;
-        
-        // Create harsh error buzz
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        oscillator.type = 'sawtooth';
-        oscillator.frequency.setValueAtTime(100, now);
-        oscillator.frequency.linearRampToValueAtTime(80, now + 0.2);
-        
-        gainNode.gain.setValueAtTime(0.4, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(this.masterGain);
-        
-        oscillator.start(now);
-        oscillator.stop(now + 0.2);
-    }
-
-    playCollision(intensity) {
-        if (!this.initialized) this.init();
-        if (!this.initialized) return;
-
-        const now = this.audioContext.currentTime;
-        
-        // Impact sound
-        const oscillator = this.audioContext.createOscillator();
-        const gainNode = this.audioContext.createGain();
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(200, now);
-        oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.1);
-        
-        const volume = Math.min(intensity * 0.1, 0.5);
-        gainNode.gain.setValueAtTime(volume, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(this.masterGain);
-        
-        oscillator.start(now);
-        oscillator.stop(now + 0.1);
+    limit(max) {
+        return this.len() > max ? this.norm().mul(max) : this;
     }
 }
 
-// ============================================
-// Taunt System - Psychological Warfare
-// ============================================
+// ===== AUDIO ENGINE =====
+class Audio {
+    constructor() {
+        this.ctx = null;
+        this.gain = null;
+    }
+    init() {
+        if (this.ctx) return;
+        try {
+            this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            this.gain = this.ctx.createGain();
+            this.gain.gain.value = 0.25;
+            this.gain.connect(this.ctx.destination);
+        } catch (e) { }
+    }
+    whoosh(vel) {
+        if (!this.ctx) this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(120 + vel * 25, now);
+        osc.frequency.exponentialRampToValueAtTime(60, now + 0.1);
+        g.gain.setValueAtTime(0, now);
+        g.gain.linearRampToValueAtTime(0.2, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+        osc.connect(g);
+        g.connect(this.gain);
+        osc.start(now);
+        osc.stop(now + 0.12);
+    }
+    buzz() {
+        if (!this.ctx) this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(90, now);
+        osc.frequency.linearRampToValueAtTime(70, now + 0.15);
+        g.gain.setValueAtTime(0.3, now);
+        g.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+        osc.connect(g);
+        g.connect(this.gain);
+        osc.start(now);
+        osc.stop(now + 0.15);
+    }
+    hit(intensity) {
+        if (!this.ctx) this.init();
+        if (!this.ctx) return;
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+        const vol = Math.min(intensity * 0.08, 0.4);
+        g.gain.setValueAtTime(vol, now);
+        g.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        osc.connect(g);
+        g.connect(this.gain);
+        osc.start(now);
+        osc.stop(now + 0.08);
+    }
+}
 
-class TauntSystem {
-    constructor(element) {
-        this.element = element;
-        this.lastTaunt = 0;
-        this.tauntCooldown = 2000; // 2 seconds between taunts
-        
-        this.taunts = {
-            slow: [
-                "Too slow! 🐌",
-                "My grandma moves faster!",
-                "Is that all you got?",
-                "Yawn... 😴"
-            ],
-            medium: [
-                "Nice try! 😏",
-                "Almost had it!",
-                "So close, yet so far...",
-                "Getting warmer! 🔥"
-            ],
-            fast: [
-                "Whoa, calm down! 😅",
-                "Someone's getting angry!",
-                "Feel the rage! 😈",
-                "You mad bro?"
-            ],
-            miss: [
-                "MISS! 🎯",
-                "Not even close!",
-                "Butterfingers! 👆",
-                "Better luck next time!"
-            ]
+// ===== TAUNT SYSTEM =====
+class Taunt {
+    constructor(el) {
+        this.el = el;
+        this.last = 0;
+        this.cooldown = 1800;
+        this.msgs = {
+            slow: ["TOO SLOW", "WEAK ATTEMPT", "TRY HARDER", "YAWN"],
+            med: ["CLOSE!", "ALMOST", "NOT QUITE", "GETTING WARMER"],
+            fast: ["WHOA!", "CALM DOWN", "ANGRY?", "RAGE MODE"],
+            miss: ["MISS!", "NOWHERE CLOSE", "PATHETIC", "L + RATIO"]
         };
     }
-
-    show(category, mouseSpeed) {
-        const now = Date.now();
-        if (now - this.lastTaunt < this.tauntCooldown) return;
-        
-        const messages = this.taunts[category];
-        const message = messages[Math.floor(Math.random() * messages.length)];
-        
-        this.element.textContent = message;
-        this.element.classList.add('show');
-        
-        this.lastTaunt = now;
-        
-        setTimeout(() => {
-            this.element.classList.remove('show');
-        }, 2000);
+    show(cat) {
+        if (Date.now() - this.last < this.cooldown) return;
+        const arr = this.msgs[cat];
+        this.el.textContent = arr[Math.floor(Math.random() * arr.length)];
+        this.el.classList.add('show');
+        this.last = Date.now();
+        setTimeout(() => this.el.classList.remove('show'), 1600);
     }
-
-    categorizeSpeed(speed) {
-        if (speed < 5) return 'slow';
-        if (speed < 12) return 'medium';
+    getCat(speed) {
+        if (speed < 4) return 'slow';
+        if (speed < 11) return 'med';
         return 'fast';
     }
 }
 
-// ============================================
-// Cursed Password Field
-// ============================================
-
-class CursedPasswordField {
-    constructor(inputElement) {
-        this.input = inputElement;
-        this.neonColors = [
-            'rgba(0, 255, 255, 0.2)',
-            'rgba(255, 0, 255, 0.2)',
-            'rgba(255, 255, 0, 0.2)',
-            'rgba(0, 255, 127, 0.2)',
-            'rgba(255, 105, 180, 0.2)',
-            'rgba(138, 43, 226, 0.2)',
-            'rgba(0, 191, 255, 0.2)',
-            'rgba(255, 20, 147, 0.2)'
+// ===== CURSED PASSWORD =====
+class Cursed {
+    constructor(input) {
+        this.input = input;
+        this.colors = [
+            'rgba(255, 0, 0, 0.15)',
+            'rgba(0, 255, 255, 0.15)',
+            'rgba(255, 0, 255, 0.15)',
+            'rgba(255, 255, 0, 0.15)',
+            'rgba(0, 255, 127, 0.15)',
+            'rgba(255, 105, 180, 0.15)'
         ];
-        this.init();
+        this.input.addEventListener('input', () => this.change());
     }
-
-    init() {
-        this.input.addEventListener('input', () => {
-            this.randomizeColor();
-        });
-        
-        this.input.addEventListener('focus', () => {
-            console.log('😈 Password field activated - Cursed mode engaged!');
-        });
-    }
-
-    randomizeColor() {
-        const randomColor = this.neonColors[Math.floor(Math.random() * this.neonColors.length)];
-        this.input.style.backgroundColor = randomColor;
+    change() {
+        const c = this.colors[Math.floor(Math.random() * this.colors.length)];
+        this.input.style.background = c;
         this.input.classList.add('cursed');
-        
-        setTimeout(() => {
-            this.input.classList.remove('cursed');
-        }, 300);
+        setTimeout(() => this.input.classList.remove('cursed'), 300);
     }
 }
 
-// ============================================
-// Particle Explosion System
-// ============================================
-
+// ===== PARTICLE SYSTEM =====
 class Particle {
-    constructor(x, y, color) {
+    constructor(x, y, c) {
         this.x = x;
         this.y = y;
-        this.vx = (Math.random() - 0.5) * 10;
-        this.vy = (Math.random() - 0.5) * 10 - 5; // Bias upward
-        this.gravity = 0.3;
-        this.friction = 0.98;
+        this.vx = (Math.random() - 0.5) * 12;
+        this.vy = (Math.random() - 0.5) * 12 - 6;
+        this.g = 0.35;
+        this.f = 0.97;
         this.life = 1.0;
-        this.decay = Math.random() * 0.01 + 0.005;
-        this.size = Math.random() * 4 + 2;
-        this.color = color;
+        this.decay = Math.random() * 0.012 + 0.006;
+        this.size = Math.random() * 5 + 2;
+        this.color = c;
     }
-
     update() {
-        this.vy += this.gravity;
-        this.vx *= this.friction;
-        this.vy *= this.friction;
+        this.vy += this.g;
+        this.vx *= this.f;
+        this.vy *= this.f;
         this.x += this.vx;
         this.y += this.vy;
         this.life -= this.decay;
     }
-
     draw(ctx) {
         ctx.save();
         ctx.globalAlpha = this.life;
@@ -254,544 +164,365 @@ class Particle {
         ctx.fillRect(this.x, this.y, this.size, this.size);
         ctx.restore();
     }
-
-    isDead() {
-        return this.life <= 0;
-    }
+    dead() { return this.life <= 0; }
 }
 
-class ParticleExplosion {
+class Explosion {
     constructor() {
         this.canvas = null;
         this.ctx = null;
-        this.particles = [];
-        this.animationId = null;
+        this.parts = [];
+        this.aid = null;
     }
-
-    createCanvas() {
+    explode(el) {
         this.canvas = document.createElement('canvas');
         this.canvas.id = 'particleCanvas';
         this.canvas.width = window.innerWidth;
         this.canvas.height = window.innerHeight;
         document.body.appendChild(this.canvas);
         this.ctx = this.canvas.getContext('2d');
-    }
-
-    explode(element) {
-        if (!this.canvas) this.createCanvas();
-
-        const rect = element.getBoundingClientRect();
-        const particleCount = 300;
-
-        // Sample colors from the element
-        const colors = [
-            'rgba(102, 126, 234, 0.8)',
-            'rgba(118, 75, 162, 0.8)',
-            'rgba(0, 212, 255, 0.8)',
-            'rgba(179, 102, 255, 0.8)',
-            'rgba(255, 255, 255, 0.8)'
-        ];
-
-        // Create particles from the element's position
-        for (let i = 0; i < particleCount; i++) {
-            const x = rect.left + Math.random() * rect.width;
-            const y = rect.top + Math.random() * rect.height;
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            this.particles.push(new Particle(x, y, color));
+        
+        const r = el.getBoundingClientRect();
+        const colors = ['#E5E7EB', '#C0C0C0', '#6B7280', '#FFFFFF', '#D4D4D4'];
+        
+        for (let i = 0; i < 400; i++) {
+            const x = r.left + Math.random() * r.width;
+            const y = r.top + Math.random() * r.height;
+            const c = colors[Math.floor(Math.random() * colors.length)];
+            this.parts.push(new Particle(x, y, c));
         }
-
-        // Hide the original element
-        element.style.opacity = '0';
-        element.style.pointerEvents = 'none';
-
-        // Start animation
+        
+        el.style.opacity = '0';
         this.animate();
     }
-
     animate() {
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Update and draw particles
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            const particle = this.particles[i];
-            particle.update();
-            particle.draw(this.ctx);
-
-            if (particle.isDead()) {
-                this.particles.splice(i, 1);
-            }
+        for (let i = this.parts.length - 1; i >= 0; i--) {
+            const p = this.parts[i];
+            p.update();
+            p.draw(this.ctx);
+            if (p.dead()) this.parts.splice(i, 1);
         }
-
-        // Continue animation if particles remain
-        if (this.particles.length > 0) {
-            this.animationId = requestAnimationFrame(() => this.animate());
+        if (this.parts.length > 0) {
+            this.aid = requestAnimationFrame(() => this.animate());
         } else {
             this.cleanup();
         }
     }
-
     cleanup() {
-        if (this.animationId) {
-            cancelAnimationFrame(this.animationId);
-        }
+        if (this.aid) cancelAnimationFrame(this.aid);
         if (this.canvas && this.canvas.parentNode) {
             this.canvas.parentNode.removeChild(this.canvas);
         }
-        this.canvas = null;
-        this.ctx = null;
-        this.particles = [];
     }
 }
 
-// ============================================
-// Vector Math
-// ============================================
-
-class Vector2D {
-    constructor(x = 0, y = 0) {
-        this.x = x;
-        this.y = y;
-    }
-
-    add(vector) {
-        return new Vector2D(this.x + vector.x, this.y + vector.y);
-    }
-
-    subtract(vector) {
-        return new Vector2D(this.x - vector.x, this.y - vector.y);
-    }
-
-    multiply(scalar) {
-        return new Vector2D(this.x * scalar, this.y * scalar);
-    }
-
-    divide(scalar) {
-        return new Vector2D(this.x / scalar, this.y / scalar);
-    }
-
-    magnitude() {
-        return Math.sqrt(this.x * this.x + this.y * this.y);
-    }
-
-    normalize() {
-        const mag = this.magnitude();
-        return mag > 0 ? this.divide(mag) : new Vector2D(0, 0);
-    }
-
-    limit(max) {
-        if (this.magnitude() > max) {
-            return this.normalize().multiply(max);
-        }
-        return this;
-    }
-}
-
-// ============================================
-// Anti-Gravity Button Physics
-// ============================================
-
-class AntiGravityButton {
-    constructor(buttonElement, audioEngine, tauntSystem) {
-        this.button = buttonElement;
-        this.audioEngine = audioEngine;
-        this.tauntSystem = tauntSystem;
+// ===== IMPOSSIBLE BUTTON =====
+class ImpossibleBtn {
+    constructor(btn, audio, taunt) {
+        this.btn = btn;
+        this.audio = audio;
+        this.taunt = taunt;
         
-        // Physics properties
-        this.position = new Vector2D(0, 0);
-        this.velocity = new Vector2D(0, 0);
-        this.acceleration = new Vector2D(0, 0);
+        this.pos = new Vec2();
+        this.vel = new Vec2();
+        this.acc = new Vec2();
         
-        // Physics constants - MUCH MORE AGGRESSIVE
-        this.mass = 1;
-        this.repulsionRadius = 250; // LARGER detection radius
-        this.repulsionForce = 4.5; // STRONGER force
-        this.friction = 0.95; // Less friction = more slippery
-        this.bounceRestitution = 0.75; // More bouncy
-        this.maxVelocity = 25; // FASTER maximum speed
+        this.radius = 280;
+        this.force = 5.5;
+        this.friction = 0.94;
+        this.bounce = 0.8;
+        this.maxVel = 30;
         
-        // Dimensions
-        this.width = 0;
-        this.height = 0;
-        this.screenBounds = {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        
-        // Mouse tracking
-        this.mousePos = new Vector2D(0, 0);
-        this.prevMousePos = new Vector2D(0, 0);
+        this.w = 0;
+        this.h = 0;
+        this.mouse = new Vec2();
+        this.prevMouse = new Vec2();
         this.mouseSpeed = 0;
-        this.isInitialized = false;
+        this.active = false;
         
-        // Audio tracking
-        this.lastWhooshTime = 0;
-        this.whooshCooldown = 80; // More frequent sounds
+        this.lastWhoosh = 0;
+        this.whooshCD = 70;
         
         this.init();
     }
-
+    
     init() {
-        // Get button dimensions
-        const rect = this.button.getBoundingClientRect();
-        this.width = rect.width;
-        this.height = rect.height;
+        const r = this.btn.getBoundingClientRect();
+        this.w = r.width;
+        this.h = r.height;
         
-        // Set initial position (center of screen)
-        this.position = new Vector2D(
-            (window.innerWidth - this.width) / 2,
-            (window.innerHeight - this.height) / 2
+        this.pos = new Vec2(
+            (window.innerWidth - this.w) / 2,
+            (window.innerHeight - this.h) / 2
         );
         
-        this.updateButtonPosition();
+        this.update();
         
-        // Event listeners on ENTIRE DOCUMENT for full screen tracking
-        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        document.addEventListener('mousemove', (e) => {
+            this.prevMouse = new Vec2(this.mouse.x, this.mouse.y);
+            this.mouse = new Vec2(e.clientX, e.clientY);
+            if (this.active) {
+                const delta = this.mouse.sub(this.prevMouse);
+                this.mouseSpeed = delta.len();
+            }
+            this.active = true;
+        });
         
-        // Handle window resize
-        window.addEventListener('resize', this.handleResize.bind(this));
+        window.addEventListener('resize', () => {
+            this.pos.x = Math.min(this.pos.x, window.innerWidth - this.w);
+            this.pos.y = Math.min(this.pos.y, window.innerHeight - this.h);
+        });
         
-        // Prevent button from submitting when moving fast
-        this.button.addEventListener('mousedown', (e) => {
-            if (this.velocity.magnitude() > 1) {
+        this.btn.addEventListener('mousedown', (e) => {
+            if (this.vel.len() > 1) {
                 e.preventDefault();
                 e.stopPropagation();
             }
         });
         
-        // Start animation loop
-        this.animate();
-        
-        console.log('🎮 Full-Screen Anti-Gravity Physics Engine Initialized');
-        console.log('🌍 Button can now roam the ENTIRE screen!');
+        this.loop();
+        console.log('🚀 FULL-SCREEN IMPOSSIBLE BUTTON ACTIVE');
     }
-
-    handleResize() {
-        this.screenBounds = {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        
-        // Keep button within new bounds
-        this.position.x = Math.min(this.position.x, this.screenBounds.width - this.width);
-        this.position.y = Math.min(this.position.y, this.screenBounds.height - this.height);
+    
+    getCenter() {
+        return new Vec2(this.pos.x + this.w / 2, this.pos.y + this.h / 2);
     }
-
-    handleMouseMove(e) {
-        // Store previous mouse position
-        this.prevMousePos = new Vector2D(this.mousePos.x, this.mousePos.y);
+    
+    repel() {
+        if (!this.active) return;
+        const center = this.getCenter();
+        const dist = center.sub(this.mouse);
+        const mag = dist.len();
         
-        // Calculate mouse position relative to viewport (entire screen)
-        this.mousePos = new Vector2D(e.clientX, e.clientY);
+        if (mag < this.radius && mag > 0) {
+            const str = this.force * (1 - mag / this.radius) * (this.radius / mag);
+            const dir = dist.norm();
+            const f = dir.mul(str);
+            this.acc = this.acc.add(f);
+        }
+    }
+    
+    boundaries() {
+        let hit = false;
+        let intensity = 0;
         
-        // Calculate mouse speed
-        if (this.isInitialized) {
-            const mouseDelta = this.mousePos.subtract(this.prevMousePos);
-            this.mouseSpeed = mouseDelta.magnitude();
+        if (this.pos.x < 0) {
+            this.pos.x = 0;
+            intensity = Math.abs(this.vel.x);
+            this.vel.x *= -this.bounce;
+            hit = true;
+        }
+        if (this.pos.x + this.w > window.innerWidth) {
+            this.pos.x = window.innerWidth - this.w;
+            intensity = Math.abs(this.vel.x);
+            this.vel.x *= -this.bounce;
+            hit = true;
+        }
+        if (this.pos.y < 0) {
+            this.pos.y = 0;
+            intensity = Math.max(intensity, Math.abs(this.vel.y));
+            this.vel.y *= -this.bounce;
+            hit = true;
+        }
+        if (this.pos.y + this.h > window.innerHeight) {
+            this.pos.y = window.innerHeight - this.h;
+            intensity = Math.max(intensity, Math.abs(this.vel.y));
+            this.vel.y *= -this.bounce;
+            hit = true;
         }
         
-        this.isInitialized = true;
-    }
-
-    getButtonCenter() {
-        return new Vector2D(
-            this.position.x + this.width / 2,
-            this.position.y + this.height / 2
-        );
-    }
-
-    applyRepulsionForce() {
-        if (!this.isInitialized) return;
-
-        const buttonCenter = this.getButtonCenter();
-        const distance = buttonCenter.subtract(this.mousePos);
-        const distanceMagnitude = distance.magnitude();
-
-        // Only apply force if within repulsion radius
-        if (distanceMagnitude < this.repulsionRadius && distanceMagnitude > 0) {
-            // Calculate repulsion force (inverse square law modified for smoother feel)
-            const forceMagnitude = this.repulsionForce * 
-                (1 - distanceMagnitude / this.repulsionRadius) * 
-                (this.repulsionRadius / distanceMagnitude);
+        if (hit) {
+            this.audio.hit(intensity);
+            this.btn.classList.add('collision');
+            setTimeout(() => this.btn.classList.remove('collision'), 300);
             
-            // Apply force in direction away from mouse
-            const forceDirection = distance.normalize();
-            const force = forceDirection.multiply(forceMagnitude);
-            
-            this.applyForce(force);
-        }
-    }
-
-    applyForce(force) {
-        // F = ma, so a = F/m
-        const acceleration = force.divide(this.mass);
-        this.acceleration = this.acceleration.add(acceleration);
-    }
-
-    checkBoundaryCollision() {
-        let collided = false;
-        let collisionIntensity = 0;
-
-        // Left boundary
-        if (this.position.x < 0) {
-            this.position.x = 0;
-            collisionIntensity = Math.abs(this.velocity.x);
-    checkBoundaryCollision() {
-        let collided = false;
-        let collisionIntensity = 0;
-
-        // Left boundary (screen edge)
-        if (this.position.x < 0) {
-            this.position.x = 0;
-            collisionIntensity = Math.abs(this.velocity.x);
-            this.velocity.x *= -this.bounceRestitution;
-            collided = true;
-        }
-
-        // Right boundary (screen edge)
-        if (this.position.x + this.width > this.screenBounds.width) {
-            this.position.x = this.screenBounds.width - this.width;
-            collisionIntensity = Math.abs(this.velocity.x);
-            this.velocity.x *= -this.bounceRestitution;
-            collided = true;
-        }
-
-        // Top boundary (screen edge)
-        if (this.position.y < 0) {
-            this.position.y = 0;
-            collisionIntensity = Math.max(collisionIntensity, Math.abs(this.velocity.y));
-            this.velocity.y *= -this.bounceRestitution;
-            collided = true;
-        }
-
-        // Bottom boundary (screen edge)
-        if (this.position.y + this.height > this.screenBounds.height) {
-            this.position.y = this.screenBounds.height - this.height;
-            collisionIntensity = Math.max(collisionIntensity, Math.abs(this.velocity.y));
-            this.velocity.y *= -this.bounceRestitution;
-            collided = true;
-        }
-
-        // Handle collision effects
-        if (collided) {
-            this.onCollision(collisionIntensity);
-        }
-
-        return collided;
-    }
-
-    onCollision(intensity) {
-        // Play collision sound
-        this.audioEngine.playCollision(intensity);
-        
-        // Visual feedback - flash effect
-        this.button.classList.add('collision');
-        setTimeout(() => {
-            this.button.classList.remove('collision');
-        }, 300);
-        
-        // Screen shake if strong collision
-        if (intensity > 8) {
-            const appContainer = document.querySelector('.app-container');
-            if (appContainer) {
-                appContainer.classList.add('shake');
-                setTimeout(() => {
-                    appContainer.classList.remove('shake');
-                }, 500);
+            if (intensity > 10) {
+                const w = document.querySelector('.main-wrapper');
+                if (w) {
+                    w.classList.add('shake');
+                    setTimeout(() => w.classList.remove('shake'), 500);
+                }
             }
         }
-    }   
-        // Apply friction
-        this.velocity = this.velocity.multiply(this.friction);
+    }
+    
+    update() {
+        this.btn.style.left = this.pos.x + 'px';
+        this.btn.style.top = this.pos.y + 'px';
+    }
+    
+    loop() {
+        this.repel();
+        this.vel = this.vel.add(this.acc);
+        this.vel = this.vel.mul(this.friction);
+        this.vel = this.vel.limit(this.maxVel);
         
-        // Limit maximum velocity
-        this.velocity = this.velocity.limit(this.maxVelocity);
-        
-        // Play whoosh sound based on velocity
-        const speed = this.velocity.magnitude();
+        const speed = this.vel.len();
         const now = Date.now();
-        if (speed > 3 && now - this.lastWhooshTime > this.whooshCooldown) {
-            this.audioEngine.playWhoosh(speed);
-            this.lastWhooshTime = now;
-            
-            // Show taunt based on mouse speed
-            const tauntCategory = this.tauntSystem.categorizeSpeed(this.mouseSpeed);
-            this.tauntSystem.show(tauntCategory, this.mouseSpeed);
+        if (speed > 4 && now - this.lastWhoosh > this.whooshCD) {
+            this.audio.whoosh(speed);
+            this.lastWhoosh = now;
+            const cat = this.taunt.getCat(this.mouseSpeed);
+            this.taunt.show(cat);
         }
         
-        // Update position with velocity
-        this.position = this.position.add(this.velocity);
+        this.pos = this.pos.add(this.vel);
+        this.boundaries();
+        this.acc = new Vec2(0, 0);
         
-        // Check and handle boundary collisions
-        this.checkBoundaryCollision();
-        
-        // Reset acceleration for next frame
-        this.acceleration = new Vector2D(0, 0);
-        
-        // Stop very slow movement (performance optimization)
-        if (this.velocity.magnitude() < 0.1 && !this.isInitialized) {
-            this.velocity = new Vector2D(0, 0);
+        if (this.vel.len() < 0.1 && !this.active) {
+            this.vel = new Vec2(0, 0);
         }
-    }
-
-    updateButtonPosition() {
-        // Use transform for better performance (GPU accelerated)
-        this.button.style.transform = `translate(${this.position.x}px, ${this.position.y}px)`;
-    }
-
-    animate() {
+        
         this.update();
-        this.updateButtonPosition();
-        
-        // Continue animation loop
-        requestAnimationFrame(() => this.animate());
+        requestAnimationFrame(() => this.loop());
     }
 }
 
-// ============================================
-// Initialize on DOM Load
-// ============================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    const submitBtn = document.getElementById('submitBtn');
-    const buttonContainer = document.getElementById('buttonContainer');
-    const tauntElement = document.getElementById('tauntMessage');
+// ===== PARTICLE BACKGROUND =====
+function initBackground() {
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     
-    // Initialize systems
-document.addEventListener('DOMContentLoaded', () => {
-    const submitBtn = document.getElementById('submitBtn');
-    const tauntElement = document.getElementById('tauntMessage');
+    const particles = [];
+    for (let i = 0; i < 100; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: (Math.random() - 0.5) * 0.5,
+            size: Math.random() * 2 + 0.5
+        });
+    }
     
-    // Initialize systems
-    const audioEngine = new AudioEngine();
-    const tauntSystem = new TauntSystem(tauntElement);
-    
-    // Initialize the anti-gravity physics - NOW FULL SCREEN!
-    const antiGravityButton = new AntiGravityButton(
-        submitBtn,
-        audioEngine, 
-        tauntSystem
-    );
-    
-    // Initialize cursed password field
-    const passwordField = document.getElementById('password');
-    const cursedPassword = new CursedPasswordField(passwordField);
-    
-    // Handle missed clicks ANYWHERE on screen
-    document.addEventListener('click', (e) => {
-        // Check if click missed the button
-        const buttonRect = submitBtn.getBoundingClientRect();
-        const clickedButton = e.target === submitBtn || submitBtn.contains(e.target);
+    function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        if (!clickedButton) {
-            audioEngine.playError();
-    // Form submission handler - WIN CONDITION
-    const form = document.getElementById('loginForm');
-    const authPanel = document.querySelector('.auth-panel');
-    let hasWon = false;ffect(e.clientX, e.clientY, document.body);
-        }
-    });
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        if (hasWon) return;
-        hasWon = true;
-        
-        console.log('🎯 IMPOSSIBLE! They actually clicked it!');
-        console.log('💥 Initiating destruction sequence...');
-        
-        // Play victory sound
-        audioEngine.init();
-        const now = audioEngine.audioContext.currentTime;
-        
-        // Victory fanfare
-        const oscillator = audioEngine.audioContext.createOscillator();
-        const gainNode = audioEngine.audioContext.createGain();
-        
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(523.25, now); // C
-        oscillator.frequency.setValueAtTime(659.25, now + 0.2); // E
-        oscillator.frequency.setValueAtTime(783.99, now + 0.4); // G
-        
-        gainNode.gain.setValueAtTime(0.3, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioEngine.masterGain);
-        
-        oscillator.start(now);
-        oscillator.stop(now + 0.8);
-        
-        // Hide taunt message
-        tauntElement.classList.remove('show');
-        // Explode the form
-        setTimeout(() => {
-            const particleExplosion = new ParticleExplosion();
-            particleExplosion.explode(authPanel);eExplosion();
-            particleExplosion.explode(loginCard);
+        particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
             
-            // Show victory message
-            const victoryDiv = document.createElement('div');
-            victoryDiv.className = 'victory-message';
-            victoryDiv.innerHTML = `
-                <div>Task Failed Successfully</div>
-                <div class="subtitle-victory">You beat the impossible... or did you? 🤔</div>
-            `;
-            document.body.appendChild(victoryDiv);
+            if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+            if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
             
-            // Easter egg console message
-            setTimeout(() => {
-                console.log('%c🎊 CONGRATULATIONS! 🎊', 'font-size: 20px; color: #667eea; font-weight: bold;');
-                console.log('%cYou have defeated The Impossible Login!', 'font-size: 14px; color: #b366ff;');
-                console.log('%cBut at what cost? Your sanity? 😈', 'font-size: 12px; color: #ff3b30;');
-            }, 1000);
-        }, 100);
+            ctx.fillStyle = 'rgba(192, 192, 192, 0.4)';
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+        
+        requestAnimationFrame(animate);
+    }
+    animate();
+    
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
     });
-    
-    console.log('✨ The Impossible Login is fully armed!');
-    console.log('🔊 Audio Engine loaded');
-    console.log('💬 Taunt System active');
-    console.log('😈 Cursed Password Field engaged');
-    console.log('💥 Particle Explosion System ready');
-});
-
-// ============================================
-// Visual Effects
-// ============================================
-
-function createMissEffect(x, y, container) {
-    const missIndicator = document.createElement('div');
-    missIndicator.style.position = 'absolute';
-    missIndicator.style.left = x + 'px';
-    missIndicator.style.top = y + 'px';
-    missIndicator.style.width = '40px';
-    missIndicator.style.height = '40px';
-    missIndicator.style.marginLeft = '-20px';
-    missIndicator.style.marginTop = '-20px';
-    missIndicator.style.border = '3px solid rgba(255, 59, 48, 0.8)';
-    missIndicator.style.borderRadius = '50%';
-    missIndicator.style.pointerEvents = 'none';
-    missIndicator.style.animation = 'missExpand 0.5s ease-out';
-    missIndicator.style.opacity = '0';
-    
-    container.appendChild(missIndicator);
-    
-    setTimeout(() => {
-        container.removeChild(missIndicator);
-    }, 500);
 }
 
-// Add miss effect animation to CSS dynamically
-const style = document.createElement('style');
-style.textContent = `
+// ===== MISS EFFECT =====
+function missEffect(x, y) {
+    const ring = document.createElement('div');
+    ring.style.position = 'fixed';
+    ring.style.left = x + 'px';
+    ring.style.top = y + 'px';
+    ring.style.width = '50px';
+    ring.style.height = '50px';
+    ring.style.marginLeft = '-25px';
+    ring.style.marginTop = '-25px';
+    ring.style.border = '3px solid rgba(192, 192, 192, 0.8)';
+    ring.style.borderRadius = '50%';
+    ring.style.pointerEvents = 'none';
+    ring.style.animation = 'missExpand 0.5s ease-out';
+    ring.style.opacity = '0';
+    ring.style.zIndex = '9998';
+    document.body.appendChild(ring);
+    setTimeout(() => document.body.removeChild(ring), 500);
+}
+
+const missAnim = document.createElement('style');
+missAnim.textContent = `
     @keyframes missExpand {
-        0% {
-            transform: scale(0.5);
-            opacity: 1;
-        }
-        100% {
-            transform: scale(2);
-            opacity: 0;
-        }
+        0% { transform: scale(0.5); opacity: 1; }
+        100% { transform: scale(2.5); opacity: 0; }
     }
 `;
-document.head.appendChild(style);
+document.head.appendChild(missAnim);
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+    initBackground();
+    
+    const btn = document.getElementById('signInBtn');
+    const tauntEl = document.getElementById('taunt');
+    
+    const audio = new Audio();
+    const taunt = new Taunt(tauntEl);
+    const impossible = new ImpossibleBtn(btn, audio, taunt);
+    
+    const pwd = document.getElementById('password');
+    const cursed = new Cursed(pwd);
+    
+    document.addEventListener('click', (e) => {
+        const r = btn.getBoundingClientRect();
+        const hit = e.target === btn || btn.contains(e.target);
+        
+        if (!hit) {
+            audio.buzz();
+            taunt.show('miss');
+            missEffect(e.clientX, e.clientY);
+        }
+    });
+    
+    const form = document.getElementById('authForm');
+    let won = false;
+    
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (won) return;
+        won = true;
+        
+        console.log('🎉 IMPOSSIBLE ACHIEVED!');
+        
+        audio.init();
+        const now = audio.ctx.currentTime;
+        const osc = audio.ctx.createOscillator();
+        const g = audio.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(523.25, now);
+        osc.frequency.setValueAtTime(659.25, now + 0.15);
+        osc.frequency.setValueAtTime(783.99, now + 0.3);
+        g.gain.setValueAtTime(0.25, now);
+        g.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+        osc.connect(g);
+        g.connect(audio.gain);
+        osc.start(now);
+        osc.stop(now + 0.6);
+        
+        tauntEl.classList.remove('show');
+        
+        setTimeout(() => {
+            const exp = new Explosion();
+            const panel = document.querySelector('.content-grid');
+            exp.explode(panel);
+            
+            const vic = document.createElement('div');
+            vic.className = 'victory';
+            vic.innerHTML = '<h1>TASK FAILED SUCCESSFULLY</h1><p>You beat the impossible</p>';
+            document.body.appendChild(vic);
+            
+            setTimeout(() => {
+                console.log('%c🏆 VICTORY', 'font-size:24px;color:#C0C0C0;font-weight:bold');
+                console.log('%cYou defeated the impossible button!', 'font-size:14px;color:#6B7280');
+            }, 800);
+        }, 80);
+    });
+    
+    console.log('⚡ BLACK & SILVER IMPOSSIBLE LOGIN READY');
+    console.log('🎯 Button roams ENTIRE SCREEN - Good luck!');
+});
