@@ -71,13 +71,8 @@
                         <a href="#" class="link">Forgot?</a>
                     </div>
                     
-                    <!-- THE IMPOSSIBLE BUTTON -->
-                    <button type="submit" id="signInBtn" class="sign-in-btn">
-                        <span>SIGN IN</span>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M5 12h14M12 5l7 7-7 7"/>
-                        </svg>
-                    </button>
+                    <!-- PLACEHOLDER - BUTTON IS OUTSIDE FORM -->
+                    <div style="height: 54px;"></div>
                 </form>
                 
                 <div class="footer-text">
@@ -86,6 +81,14 @@
             </div>
         </div>
     </div>
+    
+    <!-- THE IMPOSSIBLE BUTTON - MOVED OUTSIDE CONTAINER -->
+    <button type="submit" id="signInBtn" class="sign-in-btn" form="authForm">
+        <span>SIGN IN</span>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+        </svg>
+    </button>
     
     <div id="taunt" class="taunt-msg"></div>
     
