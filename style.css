@@ -256,7 +256,7 @@ body {
 
 /* THE IMPOSSIBLE SIGN IN BUTTON - FULL SCREEN MOVEMENT */
 .sign-in-btn {
-    position: fixed;
+    position: fixed !important;
     z-index: 9999;
     display: flex;
     align-items: center;

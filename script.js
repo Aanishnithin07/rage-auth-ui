@@ -475,6 +475,7 @@ class ImpossibleBtn {
     update() {
         this.btn.style.left = this.pos.x + 'px';
         this.btn.style.top = this.pos.y + 'px';
+        this.btn.style.transform = 'none';
     }
     
     loop() {
