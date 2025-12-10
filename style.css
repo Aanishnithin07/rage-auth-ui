@@ -257,8 +257,12 @@ body {
 /* THE IMPOSSIBLE SIGN IN BUTTON - FULL SCREEN MOVEMENT */
 .sign-in-btn {
     position: fixed !important;
-    z-index: 9999;
-    display: flex;
+    left: 50% !important;
+    top: 50% !important;
+    z-index: 99999 !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
     align-items: center;
     justify-content: center;
     gap: 12px;
