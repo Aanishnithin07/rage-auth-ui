@@ -391,9 +391,8 @@ class Vector2D {
 // ============================================
 
 class AntiGravityButton {
-    constructor(buttonElement, containerElement, audioEngine, tauntSystem) {
+    constructor(buttonElement, audioEngine, tauntSystem) {
         this.button = buttonElement;
-        this.container = containerElement;
         this.audioEngine = audioEngine;
         this.tauntSystem = tauntSystem;
         
@@ -402,18 +401,21 @@ class AntiGravityButton {
         this.velocity = new Vector2D(0, 0);
         this.acceleration = new Vector2D(0, 0);
         
-        // Physics constants
+        // Physics constants - MUCH MORE AGGRESSIVE
         this.mass = 1;
-        this.repulsionRadius = 150; // Detection radius in pixels
-        this.repulsionForce = 2.5; // Force multiplier
-        this.friction = 0.92; // Velocity dampening
-        this.bounceRestitution = 0.6; // Energy retained after bounce
-        this.maxVelocity = 15; // Maximum speed
+        this.repulsionRadius = 250; // LARGER detection radius
+        this.repulsionForce = 4.5; // STRONGER force
+        this.friction = 0.95; // Less friction = more slippery
+        this.bounceRestitution = 0.75; // More bouncy
+        this.maxVelocity = 25; // FASTER maximum speed
         
         // Dimensions
         this.width = 0;
         this.height = 0;
-        this.containerBounds = null;
+        this.screenBounds = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
         
         // Mouse tracking
         this.mousePos = new Vector2D(0, 0);
@@ -423,7 +425,7 @@ class AntiGravityButton {
         
         // Audio tracking
         this.lastWhooshTime = 0;
-        this.whooshCooldown = 100; // ms between whoosh sounds
+        this.whooshCooldown = 80; // More frequent sounds
         
         this.init();
     }
@@ -434,53 +436,52 @@ class AntiGravityButton {
         this.width = rect.width;
         this.height = rect.height;
         
-        // Set initial position (centered)
-        this.updateContainerBounds();
+        // Set initial position (center of screen)
         this.position = new Vector2D(
-            (this.containerBounds.width - this.width) / 2,
-            (this.containerBounds.height - this.height) / 2
+            (window.innerWidth - this.width) / 2,
+            (window.innerHeight - this.height) / 2
         );
         
         this.updateButtonPosition();
         
-        // Event listeners
-        this.container.addEventListener('mousemove', this.handleMouseMove.bind(this));
-        this.container.addEventListener('mouseenter', this.handleMouseEnter.bind(this));
-        this.container.addEventListener('mouseleave', this.handleMouseLeave.bind(this));
+        // Event listeners on ENTIRE DOCUMENT for full screen tracking
+        document.addEventListener('mousemove', this.handleMouseMove.bind(this));
         
-        // Prevent button from submitting when moving
+        // Handle window resize
+        window.addEventListener('resize', this.handleResize.bind(this));
+        
+        // Prevent button from submitting when moving fast
         this.button.addEventListener('mousedown', (e) => {
-            if (this.velocity.magnitude() > 0.5) {
+            if (this.velocity.magnitude() > 1) {
                 e.preventDefault();
+                e.stopPropagation();
             }
         });
         
         // Start animation loop
         this.animate();
         
-        console.log('🎮 Anti-Gravity Physics Engine Initialized');
+        console.log('🎮 Full-Screen Anti-Gravity Physics Engine Initialized');
+        console.log('🌍 Button can now roam the ENTIRE screen!');
     }
 
-    updateContainerBounds() {
-        const rect = this.container.getBoundingClientRect();
-        this.containerBounds = {
-            width: rect.width,
-            height: rect.height,
-            left: rect.left,
-            top: rect.top
+    handleResize() {
+        this.screenBounds = {
+            width: window.innerWidth,
+            height: window.innerHeight
         };
+        
+        // Keep button within new bounds
+        this.position.x = Math.min(this.position.x, this.screenBounds.width - this.width);
+        this.position.y = Math.min(this.position.y, this.screenBounds.height - this.height);
     }
 
     handleMouseMove(e) {
         // Store previous mouse position
         this.prevMousePos = new Vector2D(this.mousePos.x, this.mousePos.y);
         
-        // Calculate mouse position relative to container
-        this.updateContainerBounds();
-        this.mousePos = new Vector2D(
-            e.clientX - this.containerBounds.left,
-            e.clientY - this.containerBounds.top
-        );
+        // Calculate mouse position relative to viewport (entire screen)
+        this.mousePos = new Vector2D(e.clientX, e.clientY);
         
         // Calculate mouse speed
         if (this.isInitialized) {
@@ -489,15 +490,6 @@ class AntiGravityButton {
         }
         
         this.isInitialized = true;
-    }
-
-    handleMouseEnter() {
-        this.isInitialized = true;
-    }
-
-    handleMouseLeave() {
-        // Gradually stop when mouse leaves
-        this.velocity = this.velocity.multiply(0.8);
     }
 
     getButtonCenter() {
@@ -543,19 +535,27 @@ class AntiGravityButton {
         if (this.position.x < 0) {
             this.position.x = 0;
             collisionIntensity = Math.abs(this.velocity.x);
-            this.velocity.x *= -this.bounceRestitution;
-            collided = true;
-        }
+    checkBoundaryCollision() {
+        let collided = false;
+        let collisionIntensity = 0;
 
-        // Right boundary
-        if (this.position.x + this.width > this.containerBounds.width) {
-            this.position.x = this.containerBounds.width - this.width;
+        // Left boundary (screen edge)
+        if (this.position.x < 0) {
+            this.position.x = 0;
             collisionIntensity = Math.abs(this.velocity.x);
             this.velocity.x *= -this.bounceRestitution;
             collided = true;
         }
 
-        // Top boundary
+        // Right boundary (screen edge)
+        if (this.position.x + this.width > this.screenBounds.width) {
+            this.position.x = this.screenBounds.width - this.width;
+            collisionIntensity = Math.abs(this.velocity.x);
+            this.velocity.x *= -this.bounceRestitution;
+            collided = true;
+        }
+
+        // Top boundary (screen edge)
         if (this.position.y < 0) {
             this.position.y = 0;
             collisionIntensity = Math.max(collisionIntensity, Math.abs(this.velocity.y));
@@ -563,9 +563,9 @@ class AntiGravityButton {
             collided = true;
         }
 
-        // Bottom boundary
-        if (this.position.y + this.height > this.containerBounds.height) {
-            this.position.y = this.containerBounds.height - this.height;
+        // Bottom boundary (screen edge)
+        if (this.position.y + this.height > this.screenBounds.height) {
+            this.position.y = this.screenBounds.height - this.height;
             collisionIntensity = Math.max(collisionIntensity, Math.abs(this.velocity.y));
             this.velocity.y *= -this.bounceRestitution;
             collided = true;
@@ -590,22 +590,16 @@ class AntiGravityButton {
         }, 300);
         
         // Screen shake if strong collision
-        if (intensity > 5) {
-            const loginCard = document.querySelector('.login-card');
-            loginCard.classList.add('shake');
-            setTimeout(() => {
-                loginCard.classList.remove('shake');
-            }, 400);
+        if (intensity > 8) {
+            const appContainer = document.querySelector('.app-container');
+            if (appContainer) {
+                appContainer.classList.add('shake');
+                setTimeout(() => {
+                    appContainer.classList.remove('shake');
+                }, 500);
+            }
         }
-    }
-
-    update() {
-        // Apply repulsion force from mouse
-        this.applyRepulsionForce();
-
-        // Update velocity with acceleration
-        this.velocity = this.velocity.add(this.acceleration);
-        
+    }   
         // Apply friction
         this.velocity = this.velocity.multiply(this.friction);
         
@@ -663,13 +657,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const tauntElement = document.getElementById('tauntMessage');
     
     // Initialize systems
+document.addEventListener('DOMContentLoaded', () => {
+    const submitBtn = document.getElementById('submitBtn');
+    const tauntElement = document.getElementById('tauntMessage');
+    
+    // Initialize systems
     const audioEngine = new AudioEngine();
     const tauntSystem = new TauntSystem(tauntElement);
     
-    // Initialize the anti-gravity physics with audio and taunts
+    // Initialize the anti-gravity physics - NOW FULL SCREEN!
     const antiGravityButton = new AntiGravityButton(
-        submitBtn, 
-        buttonContainer, 
+        submitBtn,
         audioEngine, 
         tauntSystem
     );
@@ -678,25 +676,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const passwordField = document.getElementById('password');
     const cursedPassword = new CursedPasswordField(passwordField);
     
-    // Handle missed clicks (clicking outside the button)
-    buttonContainer.addEventListener('click', (e) => {
-        if (e.target !== submitBtn && !submitBtn.contains(e.target)) {
+    // Handle missed clicks ANYWHERE on screen
+    document.addEventListener('click', (e) => {
+        // Check if click missed the button
+        const buttonRect = submitBtn.getBoundingClientRect();
+        const clickedButton = e.target === submitBtn || submitBtn.contains(e.target);
+        
+        if (!clickedButton) {
             audioEngine.playError();
-            tauntSystem.show('miss', 0);
-            
-            // Visual feedback for miss
-            const rect = buttonContainer.getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-            createMissEffect(x, y, buttonContainer);
-        }
-    });
-    
     // Form submission handler - WIN CONDITION
     const form = document.getElementById('loginForm');
-    const loginCard = document.querySelector('.login-card');
-    let hasWon = false;
-    
+    const authPanel = document.querySelector('.auth-panel');
+    let hasWon = false;ffect(e.clientX, e.clientY, document.body);
+        }
+    });
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         
@@ -730,10 +723,10 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Hide taunt message
         tauntElement.classList.remove('show');
-        
         // Explode the form
         setTimeout(() => {
             const particleExplosion = new ParticleExplosion();
+            particleExplosion.explode(authPanel);eExplosion();
             particleExplosion.explode(loginCard);
             
             // Show victory message
