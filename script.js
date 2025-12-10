@@ -251,26 +251,32 @@ class ImpossibleBtn {
     }
     
     init() {
-        // Make sure button is visible and positioned
+        // Make button visible FIRST
+        this.btn.style.display = 'flex';
         this.btn.style.position = 'fixed';
         this.btn.style.zIndex = '9999';
         this.btn.style.transform = 'none';
+        this.btn.style.visibility = 'visible';
+        this.btn.style.opacity = '1';
         
-        const r = this.btn.getBoundingClientRect();
-        this.w = r.width;
-        this.h = r.height;
-        
-        console.log('Button dimensions:', this.w, 'x', this.h);
-        console.log('Screen dimensions:', window.innerWidth, 'x', window.innerHeight);
-        
-        this.pos = new Vec2(
-            (window.innerWidth - this.w) / 2,
-            (window.innerHeight - this.h) / 2
-        );
-        
-        console.log('Initial button position:', this.pos.x, this.pos.y);
-        
-        this.update();
+        // Wait for button to render
+        setTimeout(() => {
+            const r = this.btn.getBoundingClientRect();
+            this.w = r.width || 200;
+            this.h = r.height || 54;
+            
+            console.log('Button dimensions:', this.w, 'x', this.h);
+            console.log('Screen dimensions:', window.innerWidth, 'x', window.innerHeight);
+            
+            this.pos = new Vec2(
+                (window.innerWidth - this.w) / 2,
+                (window.innerHeight - this.h) / 2
+            );
+            
+            console.log('Initial button position:', this.pos.x, this.pos.y);
+            
+            this.update();
+        }, 100);
         
         let moveCount = 0;
         document.addEventListener('mousemove', (e) => {
