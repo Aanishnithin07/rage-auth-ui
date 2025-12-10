@@ -320,6 +320,70 @@ h2 {
     color: var(--neon-purple);
 }
 
+/* Taunt Message */
+.taunt-message {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 59, 48, 0.15);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 59, 48, 0.3);
+    border-radius: 16px;
+    padding: 16px 32px;
+    color: #ff3b30;
+    font-size: 15px;
+    font-weight: 600;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+    z-index: 1000;
+    box-shadow: 0 8px 32px rgba(255, 59, 48, 0.2);
+    text-shadow: 0 0 20px rgba(255, 59, 48, 0.5);
+}
+
+.taunt-message.show {
+    opacity: 1;
+    animation: tauntPulse 0.5s ease;
+}
+
+@keyframes tauntPulse {
+    0%, 100% { transform: translateX(-50%) scale(1); }
+    50% { transform: translateX(-50%) scale(1.05); }
+}
+
+/* Screen Shake Animation */
+@keyframes screenShake {
+    0%, 100% { transform: translate(0, 0); }
+    10%, 30%, 50%, 70%, 90% { transform: translate(-4px, 2px); }
+    20%, 40%, 60%, 80% { transform: translate(4px, -2px); }
+}
+
+.shake {
+    animation: screenShake 0.4s ease;
+}
+
+/* Button Collision Flash */
+@keyframes collisionFlash {
+    0%, 100% { box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4); }
+    50% { 
+        box-shadow: 0 8px 32px rgba(255, 59, 48, 0.8),
+                    0 0 40px rgba(255, 59, 48, 0.6);
+    }
+}
+
+.submit-btn.collision {
+    animation: collisionFlash 0.3s ease;
+}
+
+/* Miss Click Effect */
+@keyframes missClick {
+    0% { transform: translate(var(--x), var(--y)) scale(1); }
+    50% { transform: translate(var(--x), var(--y)) scale(0.95); }
+    100% { transform: translate(var(--x), var(--y)) scale(1); }
+}
+
 /* Responsive */
 @media (max-width: 560px) {
     .login-card {
@@ -332,5 +396,11 @@ h2 {
     
     .button-container {
         height: 100px;
+    }
+    
+    .taunt-message {
+        bottom: 20px;
+        padding: 12px 24px;
+        font-size: 14px;
     }
 }
