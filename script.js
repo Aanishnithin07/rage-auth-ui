@@ -197,6 +197,170 @@ class TauntSystem {
     }
 }
 
+// ============================================
+// Cursed Password Field
+// ============================================
+
+class CursedPasswordField {
+    constructor(inputElement) {
+        this.input = inputElement;
+        this.neonColors = [
+            'rgba(0, 255, 255, 0.2)',
+            'rgba(255, 0, 255, 0.2)',
+            'rgba(255, 255, 0, 0.2)',
+            'rgba(0, 255, 127, 0.2)',
+            'rgba(255, 105, 180, 0.2)',
+            'rgba(138, 43, 226, 0.2)',
+            'rgba(0, 191, 255, 0.2)',
+            'rgba(255, 20, 147, 0.2)'
+        ];
+        this.init();
+    }
+
+    init() {
+        this.input.addEventListener('input', () => {
+            this.randomizeColor();
+        });
+        
+        this.input.addEventListener('focus', () => {
+            console.log('😈 Password field activated - Cursed mode engaged!');
+        });
+    }
+
+    randomizeColor() {
+        const randomColor = this.neonColors[Math.floor(Math.random() * this.neonColors.length)];
+        this.input.style.backgroundColor = randomColor;
+        this.input.classList.add('cursed');
+        
+        setTimeout(() => {
+            this.input.classList.remove('cursed');
+        }, 300);
+    }
+}
+
+// ============================================
+// Particle Explosion System
+// ============================================
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.vx = (Math.random() - 0.5) * 10;
+        this.vy = (Math.random() - 0.5) * 10 - 5; // Bias upward
+        this.gravity = 0.3;
+        this.friction = 0.98;
+        this.life = 1.0;
+        this.decay = Math.random() * 0.01 + 0.005;
+        this.size = Math.random() * 4 + 2;
+        this.color = color;
+    }
+
+    update() {
+        this.vy += this.gravity;
+        this.vx *= this.friction;
+        this.vy *= this.friction;
+        this.x += this.vx;
+        this.y += this.vy;
+        this.life -= this.decay;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.size, this.size);
+        ctx.restore();
+    }
+
+    isDead() {
+        return this.life <= 0;
+    }
+}
+
+class ParticleExplosion {
+    constructor() {
+        this.canvas = null;
+        this.ctx = null;
+        this.particles = [];
+        this.animationId = null;
+    }
+
+    createCanvas() {
+        this.canvas = document.createElement('canvas');
+        this.canvas.id = 'particleCanvas';
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        document.body.appendChild(this.canvas);
+        this.ctx = this.canvas.getContext('2d');
+    }
+
+    explode(element) {
+        if (!this.canvas) this.createCanvas();
+
+        const rect = element.getBoundingClientRect();
+        const particleCount = 300;
+
+        // Sample colors from the element
+        const colors = [
+            'rgba(102, 126, 234, 0.8)',
+            'rgba(118, 75, 162, 0.8)',
+            'rgba(0, 212, 255, 0.8)',
+            'rgba(179, 102, 255, 0.8)',
+            'rgba(255, 255, 255, 0.8)'
+        ];
+
+        // Create particles from the element's position
+        for (let i = 0; i < particleCount; i++) {
+            const x = rect.left + Math.random() * rect.width;
+            const y = rect.top + Math.random() * rect.height;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            this.particles.push(new Particle(x, y, color));
+        }
+
+        // Hide the original element
+        element.style.opacity = '0';
+        element.style.pointerEvents = 'none';
+
+        // Start animation
+        this.animate();
+    }
+
+    animate() {
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        // Update and draw particles
+        for (let i = this.particles.length - 1; i >= 0; i--) {
+            const particle = this.particles[i];
+            particle.update();
+            particle.draw(this.ctx);
+
+            if (particle.isDead()) {
+                this.particles.splice(i, 1);
+            }
+        }
+
+        // Continue animation if particles remain
+        if (this.particles.length > 0) {
+            this.animationId = requestAnimationFrame(() => this.animate());
+        } else {
+            this.cleanup();
+        }
+    }
+
+    cleanup() {
+        if (this.animationId) {
+            cancelAnimationFrame(this.animationId);
+        }
+        if (this.canvas && this.canvas.parentNode) {
+            this.canvas.parentNode.removeChild(this.canvas);
+        }
+        this.canvas = null;
+        this.ctx = null;
+        this.particles = [];
+    }
+}
+
 class Vector2D {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -456,17 +620,77 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    // Form submission handler (for future phases)
+    // Initialize cursed password field
+    const passwordField = document.getElementById('password');
+    const cursedPassword = new CursedPasswordField(passwordField);
+    
+    // Form submission handler - WIN CONDITION
     const form = document.getElementById('loginForm');
+    const loginCard = document.querySelector('.login-card');
+    let hasWon = false;
+    
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        console.log('🎯 Form submission attempted!');
-        // Will add more logic in later phases
+        
+        if (hasWon) return;
+        hasWon = true;
+        
+        console.log('🎯 IMPOSSIBLE! They actually clicked it!');
+        console.log('💥 Initiating destruction sequence...');
+        
+        // Play victory sound
+        audioEngine.init();
+        const now = audioEngine.audioContext.currentTime;
+        
+        // Victory fanfare
+        const oscillator = audioEngine.audioContext.createOscillator();
+        const gainNode = audioEngine.audioContext.createGain();
+        
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(523.25, now); // C
+        oscillator.frequency.setValueAtTime(659.25, now + 0.2); // E
+        oscillator.frequency.setValueAtTime(783.99, now + 0.4); // G
+        
+        gainNode.gain.setValueAtTime(0.3, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioEngine.masterGain);
+        
+        oscillator.start(now);
+        oscillator.stop(now + 0.8);
+        
+        // Hide taunt message
+        tauntElement.classList.remove('show');
+        
+        // Explode the form
+        setTimeout(() => {
+            const particleExplosion = new ParticleExplosion();
+            particleExplosion.explode(loginCard);
+            
+            // Show victory message
+            const victoryDiv = document.createElement('div');
+            victoryDiv.className = 'victory-message';
+            victoryDiv.innerHTML = `
+                <div>Task Failed Successfully</div>
+                <div class="subtitle-victory">You beat the impossible... or did you? 🤔</div>
+            `;
+            document.body.appendChild(victoryDiv);
+            
+            // Easter egg console message
+            setTimeout(() => {
+                console.log('%c🎊 CONGRATULATIONS! 🎊', 'font-size: 20px; color: #667eea; font-weight: bold;');
+                console.log('%cYou have defeated The Impossible Login!', 'font-size: 14px; color: #b366ff;');
+                console.log('%cBut at what cost? Your sanity? 😈', 'font-size: 12px; color: #ff3b30;');
+            }, 1000);
+        }, 100);
     });
     
-    console.log('✨ The Impossible Login is ready with Phase 2 enhancements!');
+    console.log('✨ The Impossible Login is fully armed!');
     console.log('🔊 Audio Engine loaded');
     console.log('💬 Taunt System active');
+    console.log('😈 Cursed Password Field engaged');
+    console.log('💥 Particle Explosion System ready');
 });
 
 // ============================================
