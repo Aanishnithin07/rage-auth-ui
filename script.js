@@ -251,17 +251,28 @@ class ImpossibleBtn {
     }
     
     init() {
+        // Make sure button is visible and positioned
+        this.btn.style.position = 'fixed';
+        this.btn.style.zIndex = '9999';
+        this.btn.style.transform = 'none';
+        
         const r = this.btn.getBoundingClientRect();
         this.w = r.width;
         this.h = r.height;
+        
+        console.log('Button dimensions:', this.w, 'x', this.h);
+        console.log('Screen dimensions:', window.innerWidth, 'x', window.innerHeight);
         
         this.pos = new Vec2(
             (window.innerWidth - this.w) / 2,
             (window.innerHeight - this.h) / 2
         );
         
+        console.log('Initial button position:', this.pos.x, this.pos.y);
+        
         this.update();
         
+        let moveCount = 0;
         document.addEventListener('mousemove', (e) => {
             this.prevMouse = new Vec2(this.mouse.x, this.mouse.y);
             this.mouse = new Vec2(e.clientX, e.clientY);
@@ -270,6 +281,12 @@ class ImpossibleBtn {
                 this.mouseSpeed = delta.len();
             }
             this.active = true;
+            
+            // Debug first few movements
+            moveCount++;
+            if (moveCount <= 3) {
+                console.log('Mouse move:', e.clientX, e.clientY, '| Button:', this.pos.x, this.pos.y);
+            }
         });
         
         window.addEventListener('resize', () => {
@@ -476,6 +493,7 @@ class ImpossibleBtn {
         this.btn.style.left = this.pos.x + 'px';
         this.btn.style.top = this.pos.y + 'px';
         this.btn.style.transform = 'none';
+        this.btn.style.position = 'fixed';
     }
     
     loop() {

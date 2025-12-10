@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Button Movement Test</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: black;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #testBtn {
+            position: fixed;
+            left: 100px;
+            top: 100px;
+            padding: 20px 40px;
+            background: silver;
+            color: black;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 9999;
+        }
+        #debug {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-family: monospace;
+            font-size: 14px;
+            z-index: 10000;
+            background: rgba(0,0,0,0.8);
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="debug">
+        Mouse: <span id="mousePos">0, 0</span><br>
+        Button: <span id="btnPos">100, 100</span><br>
+        Distance: <span id="dist">0</span><br>
+        Status: <span id="status">Starting...</span>
+    </div>
+    <button id="testBtn">SIGN IN</button>
+    
+    <script>
+        const btn = document.getElementById('testBtn');
+        const mousePos = document.getElementById('mousePos');
+        const btnPos = document.getElementById('btnPos');
+        const distEl = document.getElementById('dist');
+        const statusEl = document.getElementById('status');
+        
+        let bx = 100, by = 100;
+        let mx = 0, my = 0;
+        
+        document.addEventListener('mousemove', (e) => {
+            mx = e.clientX;
+            my = e.clientY;
+            mousePos.textContent = `${mx}, ${my}`;
+            
+            // Calculate distance
+            const dx = (bx + btn.offsetWidth/2) - mx;
+            const dy = (by + btn.offsetHeight/2) - my;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            distEl.textContent = dist.toFixed(0);
+            
+            // If mouse within 300px, move button away
+            if (dist < 300) {
+                const angle = Math.atan2(dy, dx);
+                bx += Math.cos(angle) * 10;
+                by += Math.sin(angle) * 10;
+                
+                // Keep in bounds
+                bx = Math.max(0, Math.min(bx, window.innerWidth - btn.offsetWidth));
+                by = Math.max(0, Math.min(by, window.innerHeight - btn.offsetHeight));
+                
+                btn.style.left = bx + 'px';
+                btn.style.top = by + 'px';
+                btnPos.textContent = `${Math.round(bx)}, ${Math.round(by)}`;
+                statusEl.textContent = 'RUNNING AWAY!';
+                statusEl.style.color = 'red';
+            } else {
+                statusEl.textContent = 'Safe';
+                statusEl.style.color = 'lime';
+            }
+        });
+        
+        console.log('Test script loaded!');
+        statusEl.textContent = 'READY - Move mouse near button';
+        statusEl.style.color = 'yellow';
+    </script>
+</body>
+</html>
