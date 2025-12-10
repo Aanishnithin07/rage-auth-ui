@@ -41,43 +41,35 @@ class AudioEngine {
         
         // Map velocity to frequency (faster = higher pitch)
         const baseFrequency = 150;
-class AntiGravityButton {
-    constructor(buttonElement, containerElement, audioEngine, tauntSystem) {
-        this.button = buttonElement;
-        this.container = containerElement;
-        this.audioEngine = audioEngine;
-        this.tauntSystem = tauntSystem;
+        const frequency = baseFrequency + (velocity * 30);
         
-        // Physics properties
-        this.position = new Vector2D(0, 0);
-        this.velocity = new Vector2D(0, 0);
-        this.acceleration = new Vector2D(0, 0);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(frequency, now);
+        oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.5, now + 0.1);
         
-        // Physics constants
-        this.mass = 1;
-        this.repulsionRadius = 150; // Detection radius in pixels
-        this.repulsionForce = 2.5; // Force multiplier
-        this.friction = 0.92; // Velocity dampening
-        this.bounceRestitution = 0.6; // Energy retained after bounce
-        this.maxVelocity = 15; // Maximum speed
+        // Filter for more organic sound
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(2000, now);
+        filter.Q.setValueAtTime(1, now);
         
-        // Dimensions
-        this.width = 0;
-        this.height = 0;
-        this.containerBounds = null;
+        // Quick fade in/out envelope
+        gainNode.gain.setValueAtTime(0, now);
+        gainNode.gain.linearRampToValueAtTime(0.3, now + 0.01);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
         
-        // Mouse tracking
-        this.mousePos = new Vector2D(0, 0);
-        this.prevMousePos = new Vector2D(0, 0);
-        this.mouseSpeed = 0;
-        this.isInitialized = false;
+        // Connect the nodes
+        oscillator.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(this.masterGain);
         
-        // Audio tracking
-        this.lastWhooshTime = 0;
-        this.whooshCooldown = 100; // ms between whoosh sounds
-        
-        this.init();
-    }   if (!this.initialized) return;
+        // Play
+        oscillator.start(now);
+        oscillator.stop(now + 0.15);
+    }
+
+    playError() {
+        if (!this.initialized) this.init();
+        if (!this.initialized) return;
 
         const now = this.audioContext.currentTime;
         
@@ -114,24 +106,14 @@ class AntiGravityButton {
         oscillator.frequency.exponentialRampToValueAtTime(50, now + 0.1);
         
         const volume = Math.min(intensity * 0.1, 0.5);
-    handleMouseMove(e) {
-        // Store previous mouse position
-        this.prevMousePos = new Vector2D(this.mousePos.x, this.mousePos.y);
+        gainNode.gain.setValueAtTime(volume, now);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
         
-        // Calculate mouse position relative to container
-        this.updateContainerBounds();
-        this.mousePos = new Vector2D(
-            e.clientX - this.containerBounds.left,
-            e.clientY - this.containerBounds.top
-        );
+        oscillator.connect(gainNode);
+        gainNode.connect(this.masterGain);
         
-        // Calculate mouse speed
-        if (this.isInitialized) {
-            const mouseDelta = this.mousePos.subtract(this.prevMousePos);
-            this.mouseSpeed = mouseDelta.magnitude();
-        }
-        
-        this.isInitialized = true;
+        oscillator.start(now);
+        oscillator.stop(now + 0.1);
     }
 }
 
@@ -361,6 +343,10 @@ class ParticleExplosion {
     }
 }
 
+// ============================================
+// Vector Math
+// ============================================
+
 class Vector2D {
     constructor(x = 0, y = 0) {
         this.x = x;
@@ -400,10 +386,16 @@ class Vector2D {
     }
 }
 
+// ============================================
+// Anti-Gravity Button Physics
+// ============================================
+
 class AntiGravityButton {
-    constructor(buttonElement, containerElement) {
+    constructor(buttonElement, containerElement, audioEngine, tauntSystem) {
         this.button = buttonElement;
         this.container = containerElement;
+        this.audioEngine = audioEngine;
+        this.tauntSystem = tauntSystem;
         
         // Physics properties
         this.position = new Vector2D(0, 0);
@@ -425,7 +417,13 @@ class AntiGravityButton {
         
         // Mouse tracking
         this.mousePos = new Vector2D(0, 0);
+        this.prevMousePos = new Vector2D(0, 0);
+        this.mouseSpeed = 0;
         this.isInitialized = false;
+        
+        // Audio tracking
+        this.lastWhooshTime = 0;
+        this.whooshCooldown = 100; // ms between whoosh sounds
         
         this.init();
     }
@@ -474,12 +472,22 @@ class AntiGravityButton {
     }
 
     handleMouseMove(e) {
+        // Store previous mouse position
+        this.prevMousePos = new Vector2D(this.mousePos.x, this.mousePos.y);
+        
         // Calculate mouse position relative to container
         this.updateContainerBounds();
         this.mousePos = new Vector2D(
             e.clientX - this.containerBounds.left,
             e.clientY - this.containerBounds.top
         );
+        
+        // Calculate mouse speed
+        if (this.isInitialized) {
+            const mouseDelta = this.mousePos.subtract(this.prevMousePos);
+            this.mouseSpeed = mouseDelta.magnitude();
+        }
+        
         this.isInitialized = true;
     }
 
@@ -509,6 +517,24 @@ class AntiGravityButton {
         // Only apply force if within repulsion radius
         if (distanceMagnitude < this.repulsionRadius && distanceMagnitude > 0) {
             // Calculate repulsion force (inverse square law modified for smoother feel)
+            const forceMagnitude = this.repulsionForce * 
+                (1 - distanceMagnitude / this.repulsionRadius) * 
+                (this.repulsionRadius / distanceMagnitude);
+            
+            // Apply force in direction away from mouse
+            const forceDirection = distance.normalize();
+            const force = forceDirection.multiply(forceMagnitude);
+            
+            this.applyForce(force);
+        }
+    }
+
+    applyForce(force) {
+        // F = ma, so a = F/m
+        const acceleration = force.divide(this.mass);
+        this.acceleration = this.acceleration.add(acceleration);
+    }
+
     checkBoundaryCollision() {
         let collided = false;
         let collisionIntensity = 0;
@@ -543,6 +569,36 @@ class AntiGravityButton {
             collisionIntensity = Math.max(collisionIntensity, Math.abs(this.velocity.y));
             this.velocity.y *= -this.bounceRestitution;
             collided = true;
+        }
+
+        // Handle collision effects
+        if (collided) {
+            this.onCollision(collisionIntensity);
+        }
+
+        return collided;
+    }
+
+    onCollision(intensity) {
+        // Play collision sound
+        this.audioEngine.playCollision(intensity);
+        
+        // Visual feedback - flash effect
+        this.button.classList.add('collision');
+        setTimeout(() => {
+            this.button.classList.remove('collision');
+        }, 300);
+        
+        // Screen shake if strong collision
+        if (intensity > 5) {
+            const loginCard = document.querySelector('.login-card');
+            loginCard.classList.add('shake');
+            setTimeout(() => {
+                loginCard.classList.remove('shake');
+            }, 400);
+        }
+    }
+
     update() {
         // Apply repulsion force from mouse
         this.applyRepulsionForce();
@@ -581,10 +637,22 @@ class AntiGravityButton {
         if (this.velocity.magnitude() < 0.1 && !this.isInitialized) {
             this.velocity = new Vector2D(0, 0);
         }
-    }       }, 400);
-        }
-    }       collided = true;
-        }
+    }
+
+    updateButtonPosition() {
+        // Use transform for better performance (GPU accelerated)
+        this.button.style.transform = `translate(${this.position.x}px, ${this.position.y}px)`;
+    }
+
+    animate() {
+        this.update();
+        this.updateButtonPosition();
+        
+        // Continue animation loop
+        requestAnimationFrame(() => this.animate());
+    }
+}
+
 // ============================================
 // Initialize on DOM Load
 // ============================================
@@ -606,6 +674,10 @@ document.addEventListener('DOMContentLoaded', () => {
         tauntSystem
     );
     
+    // Initialize cursed password field
+    const passwordField = document.getElementById('password');
+    const cursedPassword = new CursedPasswordField(passwordField);
+    
     // Handle missed clicks (clicking outside the button)
     buttonContainer.addEventListener('click', (e) => {
         if (e.target !== submitBtn && !submitBtn.contains(e.target)) {
@@ -619,10 +691,6 @@ document.addEventListener('DOMContentLoaded', () => {
             createMissEffect(x, y, buttonContainer);
         }
     });
-    
-    // Initialize cursed password field
-    const passwordField = document.getElementById('password');
-    const cursedPassword = new CursedPasswordField(passwordField);
     
     // Form submission handler - WIN CONDITION
     const form = document.getElementById('loginForm');
@@ -733,64 +801,4 @@ style.textContent = `
         }
     }
 `;
-document.head.appendChild(style);     this.applyRepulsionForce();
-
-        // Update velocity with acceleration
-        this.velocity = this.velocity.add(this.acceleration);
-        
-        // Apply friction
-        this.velocity = this.velocity.multiply(this.friction);
-        
-        // Limit maximum velocity
-        this.velocity = this.velocity.limit(this.maxVelocity);
-        
-        // Update position with velocity
-        this.position = this.position.add(this.velocity);
-        
-        // Check and handle boundary collisions
-        this.checkBoundaryCollision();
-        
-        // Reset acceleration for next frame
-        this.acceleration = new Vector2D(0, 0);
-        
-        // Stop very slow movement (performance optimization)
-        if (this.velocity.magnitude() < 0.1 && !this.isInitialized) {
-            this.velocity = new Vector2D(0, 0);
-        }
-    }
-
-    updateButtonPosition() {
-        // Use transform for better performance (GPU accelerated)
-        this.button.style.transform = `translate(${this.position.x}px, ${this.position.y}px)`;
-    }
-
-    animate() {
-        this.update();
-        this.updateButtonPosition();
-        
-        // Continue animation loop
-        requestAnimationFrame(() => this.animate());
-    }
-}
-
-// ============================================
-// Initialize on DOM Load
-// ============================================
-
-document.addEventListener('DOMContentLoaded', () => {
-    const submitBtn = document.getElementById('submitBtn');
-    const buttonContainer = document.getElementById('buttonContainer');
-    
-    // Initialize the anti-gravity physics
-    const antiGravityButton = new AntiGravityButton(submitBtn, buttonContainer);
-    
-    // Form submission handler (for future phases)
-    const form = document.getElementById('loginForm');
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        console.log('🎯 Form submission attempted!');
-        // Will add more logic in later phases
-    });
-    
-    console.log('✨ The Impossible Login is ready!');
-});
+document.head.appendChild(style);
