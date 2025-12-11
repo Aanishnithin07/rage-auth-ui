@@ -433,10 +433,54 @@ document.addEventListener('DOMContentLoaded', () => {
     // Victory
     const form = document.getElementById('authForm');
     let won = false;
+    let enterPressCount = 0;
     
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         if (won) return;
+        
+        // Check if button was actually clicked (not Enter key)
+        const clickedButton = e.submitter === btn;
+        
+        if (!clickedButton) {
+            // User tried to cheat with Enter key!
+            enterPressCount++;
+            audio.buzz();
+            
+            const cowardMessages = [
+                "ARE YOU A COWARD? �",
+                "TOO SCARED TO CLICK? 😏",
+                "ENTER KEY? REALLY? 🤦",
+                "PATHETIC! USE YOUR MOUSE! 🖱️",
+                "CHICKEN MODE ACTIVATED 🐓",
+                "GROW SOME COURAGE! 💪",
+                "THAT'S NOT HOW THIS WORKS 😤",
+                "CLICK THE BUTTON, COWARD! 🎯",
+                "ENTER WON'T SAVE YOU 💀",
+                "STOP BEING A WIMP! 😈",
+                "YOU'RE BETTER THAN THIS... OR ARE YOU? 🤔",
+                "99.9% QUIT. YOU'RE QUITTING TOO? 💩"
+            ];
+            
+            const msg = enterPressCount > cowardMessages.length - 1 
+                ? cowardMessages[cowardMessages.length - 1]
+                : cowardMessages[enterPressCount - 1];
+            
+            tauntEl.textContent = msg;
+            tauntEl.classList.add('show');
+            setTimeout(() => tauntEl.classList.remove('show'), 2500);
+            
+            // Shake the wrapper to emphasize
+            const wrapper = document.querySelector('.main-wrapper');
+            if (wrapper) {
+                wrapper.classList.add('shake');
+                setTimeout(() => wrapper.classList.remove('shake'), 500);
+            }
+            
+            console.log('🚫 NICE TRY! Click the button, coward.');
+            return;
+        }
+        
         won = true;
         
         console.log('🎉 IMPOSSIBLE ACHIEVED!');
