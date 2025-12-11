@@ -434,13 +434,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('authForm');
     let won = false;
     let enterPressCount = 0;
+    let buttonWasClicked = false;
+    
+    // Track actual button clicks
+    btn.addEventListener('click', () => {
+        buttonWasClicked = true;
+    });
     
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         if (won) return;
         
         // Check if button was actually clicked (not Enter key)
-        const clickedButton = e.submitter === btn;
+        const clickedButton = buttonWasClicked;
         
         if (!clickedButton) {
             // User tried to cheat with Enter key!
@@ -481,6 +487,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
+        // Reset flag for next attempt
+        buttonWasClicked = false;
         won = true;
         
         console.log('🎉 IMPOSSIBLE ACHIEVED!');
