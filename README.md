@@ -197,7 +197,7 @@ MIT License - Use this to torture your own users
 
 <div align="center">
 
-**Built with chaos by [Aanish Nithin A](https://github.com/Aanishnithin07)**
+**Built with chaos by [Aanish Nithin A] (https://github.com/Aanishnithin07)**
 
 ⭐ Star this repo if it made you rage quit
 
