@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>MINIMAL TEST</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #000; 
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+        #btn {
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 60px;
+            background: linear-gradient(135deg, #E5E7EB, #9CA3AF);
+            color: #000;
+            border: 2px solid #C0C0C0;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 9999;
+        }
+        #info {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: #0f0;
+            font-family: monospace;
+            font-size: 16px;
+            background: rgba(0,0,0,0.8);
+            padding: 15px;
+            z-index: 10000;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div id="info">
+        STATUS: <span id="status">LOADING...</span><br>
+        MOUSE: <span id="mouse">0, 0</span><br>
+        BUTTON: <span id="pos">?, ?</span><br>
+        DISTANCE: <span id="dist">?</span><br>
+        VELOCITY: <span id="vel">0</span>
+    </div>
+    
+    <button id="btn">SIGN IN</button>
+    
+    <script>
+        const btn = document.getElementById('btn');
+        const status = document.getElementById('status');
+        const mouseEl = document.getElementById('mouse');
+        const posEl = document.getElementById('pos');
+        const distEl = document.getElementById('dist');
+        const velEl = document.getElementById('vel');
+        
+        let x = window.innerWidth / 2 - 100;
+        let y = window.innerHeight / 2 - 27;
+        let vx = 0, vy = 0;
+        let mx = 0, my = 0;
+        
+        status.textContent = 'READY!';
+        status.style.color = '#0f0';
+        
+        document.addEventListener('mousemove', (e) => {
+            mx = e.clientX;
+            my = e.clientY;
+            mouseEl.textContent = `${mx}, ${my}`;
+        });
+        
+        function loop() {
+            // Calculate center of button
+            const cx = x + 100;
+            const cy = y + 27;
+            
+            // Distance to mouse
+            const dx = cx - mx;
+            const dy = cy - my;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            distEl.textContent = dist.toFixed(0);
+            
+            // Repel if too close
+            if (dist < 300 && dist > 0) {
+                const force = 15 * (1 - dist/300);
+                const angle = Math.atan2(dy, dx);
+                vx += Math.cos(angle) * force;
+                vy += Math.sin(angle) * force;
+                status.textContent = 'FLEEING!';
+                status.style.color = '#f00';
+            } else {
+                status.textContent = 'SAFE';
+                status.style.color = '#0f0';
+            }
+            
+            // Apply velocity
+            vx *= 0.88;
+            vy *= 0.88;
+            
+            const speed = Math.sqrt(vx*vx + vy*vy);
+            if (speed > 50) {
+                vx = (vx/speed) * 50;
+                vy = (vy/speed) * 50;
+            }
+            
+            x += vx;
+            y += vy;
+            
+            // Boundaries
+            if (x < 0) { x = 0; vx = Math.abs(vx) * 0.9; }
+            if (x > window.innerWidth - 200) { x = window.innerWidth - 200; vx = -Math.abs(vx) * 0.9; }
+            if (y < 0) { y = 0; vy = Math.abs(vy) * 0.9; }
+            if (y > window.innerHeight - 54) { y = window.innerHeight - 54; vy = -Math.abs(vy) * 0.9; }
+            
+            // Update button
+            btn.style.left = x + 'px';
+            btn.style.top = y + 'px';
+            btn.style.transform = 'none';
+            
+            posEl.textContent = `${Math.round(x)}, ${Math.round(y)}`;
+            velEl.textContent = speed.toFixed(1);
+            
+            requestAnimationFrame(loop);
+        }
+        
+        console.log('MINIMAL TEST STARTING...');
+        loop();
+    </script>
+</body>
+</html>
