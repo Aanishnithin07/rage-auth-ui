@@ -437,13 +437,60 @@ document.addEventListener('DOMContentLoaded', () => {
     let buttonWasClicked = false;
     
     // Track actual button clicks
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+        console.log('🖱️ Button CLICKED!');
         buttonWasClicked = true;
+    });
+    
+    // Detect Enter key press to block cowards
+    form.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            console.log('⌨️ Enter key pressed - COWARD!');
+            e.preventDefault();
+            
+            // Manually trigger the coward response
+            enterPressCount++;
+            audio.buzz();
+            
+            const cowardMessages = [
+                "ARE YOU A COWARD? 🐔",
+                "TOO SCARED TO CLICK? 😏",
+                "ENTER KEY? REALLY? 🤦",
+                "PATHETIC! USE YOUR MOUSE! 🖱️",
+                "CHICKEN MODE ACTIVATED 🐓",
+                "GROW SOME COURAGE! 💪",
+                "THAT'S NOT HOW THIS WORKS 😤",
+                "CLICK THE BUTTON, COWARD! 🎯",
+                "ENTER WON'T SAVE YOU 💀",
+                "STOP BEING A WIMP! 😈",
+                "YOU'RE BETTER THAN THIS... OR ARE YOU? 🤔",
+                "99.9% QUIT. YOU'RE QUITTING TOO? 💩"
+            ];
+            
+            const msg = enterPressCount > cowardMessages.length - 1 
+                ? cowardMessages[cowardMessages.length - 1]
+                : cowardMessages[enterPressCount - 1];
+            
+            tauntEl.textContent = msg;
+            tauntEl.classList.add('show');
+            setTimeout(() => tauntEl.classList.remove('show'), 2500);
+            
+            // Shake the wrapper to emphasize
+            const wrapper = document.querySelector('.main-wrapper');
+            if (wrapper) {
+                wrapper.classList.add('shake');
+                setTimeout(() => wrapper.classList.remove('shake'), 500);
+            }
+            
+            console.log('🚫 NICE TRY! Click the button, coward.');
+        }
     });
     
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         if (won) return;
+        
+        console.log('📝 Form submitted. ButtonClicked:', buttonWasClicked);
         
         // Check if button was actually clicked (not Enter key)
         const clickedButton = buttonWasClicked;
@@ -487,11 +534,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        // Reset flag for next attempt
+        // VICTORY - Button was actually clicked!
+        console.log('🎉 IMPOSSIBLE ACHIEVED!');
         buttonWasClicked = false;
         won = true;
-        
-        console.log('🎉 IMPOSSIBLE ACHIEVED!');
         
         // Victory sound
         audio.init();
