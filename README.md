@@ -19,7 +19,7 @@ This is not your typical login form. This is a **physics-based rage game** disgu
 
 **The catch?** The button has other plans.
 
-### 🚀 **[TRY THE CHALLENGE NOW →](https://rage-auth-ui.vercel.app/)**
+### 🚀 **[TRY THE CHALLENGE NOW !→](https://rage-auth-ui.vercel.app/)**
 
 ---
 
@@ -209,7 +209,7 @@ MIT License - Use this to torture your own users
 
 ---
 
-## 🎮 **Easter Eggs**
+## **Easter Eggs** dont miss it!!!
 
 - The password field uses Comic Sans (cursed)
 - The password field background flashes random neon colors
