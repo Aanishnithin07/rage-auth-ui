@@ -436,10 +436,55 @@ document.addEventListener('DOMContentLoaded', () => {
     let enterPressCount = 0;
     let buttonWasClicked = false;
     
-    // Track actual button clicks
+    // Track ONLY real mouse clicks (not keyboard)
     btn.addEventListener('click', (e) => {
-        console.log('🖱️ Button CLICKED!');
-        buttonWasClicked = true;
+        // Check if it's a real mouse click (not keyboard Enter/Space)
+        const isRealClick = e.clientX !== 0 && e.clientY !== 0;
+        
+        if (isRealClick) {
+            console.log('🖱️ REAL MOUSE CLICK at', e.clientX, e.clientY);
+            buttonWasClicked = true;
+        } else {
+            console.log('⌨️ KEYBOARD CLICK DETECTED - SMART BUT NO!');
+            buttonWasClicked = false;
+            
+            // Taunt the smart guy
+            enterPressCount++;
+            audio.buzz();
+            
+            const smartMessages = [
+                "NICE TRY, SMARTASS! 🤓",
+                "TAB + ENTER? SERIOUSLY? 😏",
+                "CLEVER... BUT NO! 🚫",
+                "I SEE WHAT YOU DID THERE 👀",
+                "KEYBOARD WARRIOR DETECTED! ⌨️",
+                "THAT'S CHEATING, USE THE MOUSE! 🖱️",
+                "YOU THINK YOU'RE SMART? 🧠",
+                "TAB NAVIGATION? PATHETIC! 🤦"
+            ];
+            
+            const msg = enterPressCount > smartMessages.length - 1 
+                ? smartMessages[smartMessages.length - 1]
+                : smartMessages[enterPressCount - 1];
+            
+            tauntEl.textContent = msg;
+            tauntEl.classList.add('show');
+            setTimeout(() => tauntEl.classList.remove('show'), 2500);
+            
+            const wrapper = document.querySelector('.main-wrapper');
+            if (wrapper) {
+                wrapper.classList.add('shake');
+                setTimeout(() => wrapper.classList.remove('shake'), 500);
+            }
+        }
+    });
+    
+    // Also block Enter/Space on the button when focused
+    btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            console.log('⌨️ Keyboard activation blocked on button!');
+            e.preventDefault();
+        }
     });
     
     // Detect Enter key press to block cowards
