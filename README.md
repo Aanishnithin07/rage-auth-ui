@@ -14,7 +14,7 @@
 ## 🎮 **THE CHALLENGE**
 
 This is not your typical login form. This is a **physics-based rage game** disguised as an authentication portal.
-Actually i have create a algorithm in such a way that the sign-in button is impossibile to click . 
+Actually i have create a algorithm in such a way that the sign-in button is impossibile to click . TRY IT NOW ! 
 **Your mission?** Simple. Just click the "SIGN IN" button.
 
 **The catch?** The button has other plans.
