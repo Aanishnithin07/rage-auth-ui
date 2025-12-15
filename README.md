@@ -38,7 +38,7 @@ Actually i have create a algorithm in such a way that the sign-in button is impo
 
 ---
 
-## 🛠️ **Technology Stack**
+##  **Technology Stack**
 
 ```
 Frontend:      HTML5 • CSS3 • Vanilla JavaScript
