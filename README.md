@@ -105,7 +105,7 @@ Click the "SIGN IN" button successfully. If you succeed:
 
 ---
 
-## 🚀 **Try It Yourself**
+##  **Try It Yourself**
 
 ### **Live Demo:**
 **👉 [https://rage-auth-ui.vercel.app/](https://rage-auth-ui.vercel.app/) 👈**
