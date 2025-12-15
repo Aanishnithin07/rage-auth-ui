@@ -25,7 +25,7 @@ Actually i have create a algorithm in such a way that the sign-in button is impo
 
 ## 🎯 **What Makes This Impossible?!**
 
-| Feature| Description|
+|Feature|Description|
 |---------|-------------|
 | 🏃 **Predictive AI** | Button anticipates your mouse movements 8 steps ahead |
 | 🧠 **Corner Escape** | Detects trap situations and teleports to safe zones |
