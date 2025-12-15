@@ -176,7 +176,7 @@ Ideas for the masochistic:
 
 ---
 
-## 📜 **License**
+##  **License**
 
 MIT License - Use this to torture your own users
 
