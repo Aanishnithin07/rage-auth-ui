@@ -53,7 +53,7 @@ Hosting:       Vercel
 
 ---
 
-## 🎨 **Design Philosophy**
+##  **Design Philosophy**
 
 **Elegant Brutalism**
 - Black and silver color palette
@@ -71,7 +71,7 @@ Hosting:       Vercel
 
 ---
 
-## 📊 **The Statistics**
+## **The Statistics**
 
 ```
 Detection Radius:     350px
